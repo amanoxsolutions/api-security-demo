@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "api-security"
+version = "1.0.0"
+description = ""
+authors = ["Matthieu Lienart <matthieu.lienart@axians.com>"]
+packages = [
+    { include = "lambdas" },
+]
+
+[tool.poetry.dependencies]
+helpers_layer = { path = "lambdas/helpers_layer", develop = true}
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pyboto3 = "^1.13.18"
+joserfc = "^1.0.1"
+moto = {extras = ["dynamodb", "cognito-idp", "cognito-identity"], version = "^5.0.25"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

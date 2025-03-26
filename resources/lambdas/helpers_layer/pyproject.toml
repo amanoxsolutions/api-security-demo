@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "helpers_layer"
+version = "1.0.0"
+description = ""
+authors = ["Matthieu Lienart <matthieu.lienart@axians.com>"]
+packages = [
+    { include = "log_helpers" },
+    { include = "api_helpers" },
+    { include = "cognito_helpers" },
+    { include = "dynamodb_helpers" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+boto3 = "^1.35.87"
+crhelper = "^2.0.11"
+aws-lambda-powertools = {extras = ["tracer", "datamasking"], version = "^3.4.0"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
