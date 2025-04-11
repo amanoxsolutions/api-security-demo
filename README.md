@@ -162,7 +162,7 @@ To deploy this CDK project, follow these detailed steps:
     - Poetry (for managing Python dependencies)
     - Docker (for Lambda packaging)
 
-   Ensure Docker is installed and running on your local machine. Docker is required for packaging Lambda functions during the CDK deployment process.
+   **Ensure Docker is installed and running on your local machine.** Docker is required for packaging Lambda functions during the CDK deployment process.
 
    Configure your programmatic access to AWS for the CLI
     - Refer to this AWS documentation: [Authentication and access credentials for the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-authentication.html)
@@ -173,6 +173,7 @@ Before deploying, you need to bootstrap your AWS account for CDK. Run the follow
    ```
    cdk bootstrap aws://ACCOUNT-NUMBER/REGION
    ```
+
 Replace `ACCOUNT-NUMBER` with your AWS account number and `REGION` with your target region.
 
 2. **Clone the repository**:
@@ -196,7 +197,7 @@ Replace `ACCOUNT-NUMBER` with your AWS account number and `REGION` with your tar
     | Property | Type | Required | Default | Description |
     |----------|------|----------|---------|-------------|
     | prefix | string | Yes | - | Prefix for resource naming |
-    | codestarConnectionArn | string | Yes | - | ARN for CodeStar connection |
+    | codestarConnectionArn | string | Yes | - | ARN for connections to this repo. For detailed instructions, see [Creating a connection to GitHub in the AWS Developer Tools Console](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html#connections-create-github-console)|
     | runtime | Runtime | No | PYTHON_3_12 | Lambda runtime environment |
     | removalPolicy | RemovalPolicy | No | DESTROY | Resource removal policy |
     | repoName | string | Yes | - | Source repository name |
@@ -213,31 +214,16 @@ Replace `ACCOUNT-NUMBER` with your AWS account number and `REGION` with your tar
    cdk deploy
    ```
 
-   This command will:
-    - Synthesize the CloudFormation template
-    - Create or update the necessary AWS resources, including:
-        - S3 bucket for pipeline artifacts
-        - CodePipeline for CI/CD
-        - Lambda functions
-        - API Gateway
-        - DynamoDB table
-        - Cognito User Pool and Identity Pool
-    - Deploy the stack to your configured AWS account
+   This command will deploy a CodePipeline which will depliy the application stack defined in `lib/app` folder.
 
-7. **Monitor the deployment**:
-    - The CDK will provide real-time updates on the deployment progress.
-    - Once completed, it will output important information such as API endpoints and resource ARNs.
-
-8. **Post-deployment steps**:
-    - The pipeline will automatically run unit tests as part of the deployment process.
-    - You can monitor the pipeline execution in the AWS CodePipeline console.
-
-9. **Clean up**:
-    - To remove all created resources, run:
+7. **Clean up**:
+    - Note that some resources (like S3 buckets) may require manual deletion before deleting the stack, if they contain data.
+    - To remove the pipeline resources, run:
       ```
       cdk destroy
       ```
-    - Note that some resources (like S3 buckets) may require manual deletion if they contain data.
+    - The command will only delete the pipline, not the resources deploy by the application CloudFormation stack. The delete the application ressources, go directly in CloudFormation and manually delete the corresponding stack.
+
 
 **Important Notes**:
 - Ensure you have the necessary permissions to create and manage the AWS resources defined in the stack.
@@ -283,30 +269,73 @@ To authenticate as a user pool user:
 
 1. All users have the same password which is automatically generated and stored in a Secrets Manager secret named `<stack prefix>-TestUSersPassword` (by default api-security-challenge-TestUSersPassword)
 
-2. Get the User Pool ID and Client ID from the AWS Console or the CDK stack outputs.
-
+2. Get the User Pool ID and Client ID
+```
+YOUR_USER_POOL_ID=$(aws cognito-idp list-user-pools \
+    --region eu-central-1 \
+    --max-results 60 \
+    | jq -r '.UserPools[].Id')
+```
+```
+YOUR_IDENTITY_POOL_ID=$(aws cognito-identity list-identity-pools \
+    --max-results 60 \
+    --region $YOUR_REGION \
+    | jq '.IdentityPools[].IdentityPoolId')
+```
+```
+YOUR_CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
+    --user-pool-id $YOUR_USER_POOL_ID \
+    --region $YOUR_REGION \
+    | jq -r '.UserPoolClients[].ClientId')
+```
 3. Initiate authentication using the AWS CLI:
 
-   ```
-   aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --client-id YOUR_CLIENT_ID --auth-parameters USERNAME=YOUR_USERNAME,PASSWORD=YOUR_PASSWORD --region YOUR_REGION
-   ```
+Replace YOUR_USERNAME with the email address from one of the test user (see the list above) and YOUR_PASSWORD by the password from Secrets Manager.
 
-   Replace YOUR_USERNAME with the email address from one of the test user (see the list above) and YOUR_PASSWORD by the password from Secrets Manager.
+```
+# Replace YOUR_PASSWORD
+YOUR_PASSWORD=<yourpassword>
+YOUR_USERNAME=registeredcustomer1@axians.com
+YOUR_ID_TOKEN=$(aws cognito-idp initiate-auth \
+    --auth-flow USER_PASSWORD_AUTH \
+    --client-id $YOUR_CLIENT_ID \
+    --auth-parameters USERNAME=$YOUR_USERNAME,PASSWORD=$YOUR_PASSWORD \
+    --region $YOUR_REGION \
+    | jq -r .AuthenticationResult.IdToken)
+```
+```
+unset YOUR_PASSWORD
+```
+4. Use YOUR_ID_TOKEN to get an IdentityId:
 
-4. This will return an IdToken, AccessToken, and RefreshToken. Use the IdToken to get an IdentityId:
+```
+YOUR_IDENTITY_ID=$(aws cognito-identity get-id \
+    --identity-pool-id $YOUR_IDENTITY_POOL_ID \
+    --logins cognito-idp.$YOUR_REGION.amazonaws.com/$YOUR_USER_POOL_ID=$YOUR_ID_TOKEN \
+    --region $YOUR_REGION \
+    | jq -r '.IdentityId')
 
-   ```
-   aws cognito-identity get-id --identity-pool-id YOUR_IDENTITY_POOL_ID --logins cognito-idp.YOUR_REGION.amazonaws.com/YOUR_USER_POOL_ID=YOUR_ID_TOKEN --region YOUR_REGION
-   ```
-
+ ```
 5. Finally, get the credentials for the authenticated user:
 
-   ```
-   aws cognito-identity get-credentials-for-identity --identity-id YOUR_IDENTITY_ID --logins cognito-idp.YOUR_REGION.amazonaws.com/YOUR_USER_POOL_ID=YOUR_ID_TOKEN --region YOUR_REGION
-   ```
+```
+YOUR_CREDS=$(aws cognito-identity get-credentials-for-identity \
+    --identity-id $YOUR_IDENTITY_ID \
+    --logins cognito-idp.$YOUR_REGION.amazonaws.com/$YOUR_USER_POOL_ID=$YOUR_ID_TOKEN \
+    --region $YOUR_REGION)
+```
+6. This will return temporary AWS credentials (AccessKeyId, SecretKey, and SessionToken) for the authenticated user.(YOUR_USERNAME=registeredcustomer1@axians.com)
 
-6. This will return temporary AWS credentials (AccessKeyId, SecretKey, and SessionToken) for the authenticated user.
-
+```
+# Extract individual values
+echo "ACESS KEY ID:" $(echo $CREDS | jq -r '.Credentials.AccessKeyId')
+echo "AWS_SECRET_ACCESS_KEY:" $(echo $CREDS | jq -r '.Credentials.SecretKey')
+echo "AWS_SESSION_TOKEN:"$(echo $CREDS | jq -r '.Credentials.SessionToken')
+```
+```
+#Unset the credentials from the env variables
+unset $YOUR_CREDS
+```
 You can use these temporary credentials to make authenticated requests to your API or other AWS services. Remember to handle these credentials securely and never expose them in client-side code or public repositories.
 
 ## Testing API Gateway APIs with Postman
@@ -324,27 +353,59 @@ After obtaining the temporary AWS credentials from the Cognito authentication pr
         - SecretKey: Enter the SecretKey from the temporary credentials.
         - AWS Region: Enter your AWS region (e.g., us-east-1).
         - Service Name: Enter "execute-api" (without quotes).
+        - Session Token: Enter the AWS session token from the temporary credentials
 
 3. **Set up the request**:
     - Enter the API Gateway URL in the request URL field. You can find this URL in the AWS Console or the CDK stack outputs.
     - Select the appropriate HTTP method (GET, POST, etc.) based on the endpoint you're testing.
 
-4. **Add headers**:
-    - Add a header `X-Amz-Security-Token` with the value of the SessionToken from the temporary credentials.
 
-5. **Make the request**:
+4. **Make the request**:
     - Click the "Send" button to make the request to your API.
 
 Example: Testing the `/products` endpoint:
 
 1. Set the HTTP method to GET.
-2. Enter the full URL for the products endpoint (e.g., `https://your-api-id.execute-api.your-region.amazonaws.com/prod/products`).
+2. Enter the full URL for the products endpoint with the required URL query string parameters ( (e.g., `https://your-api-id.execute-api.your-region.amazonaws.com/prod/products?shopToken=IOQ984&shopId=0001`).
 3. Ensure the AWS Signature authentication is set up as described above.
-4. Add the `X-Amz-Security-Token` header with the SessionToken value.
-5. Click "Send" to make the request.
+4. Click "Send" to make the request.
 
 Postman will automatically sign the request using AWS Signature Version 4 with the provided credentials, allowing you to test your secured API endpoints.
 
+### Example Output from postman
+Here is an example output from postman when invoking the get products API as a customer (registeredcustomer1@axians.com)
+```
+{
+    "productsList": [
+        {
+            "description": "msgHFPtspq",
+            "name": "Zztoj",
+            "price": 110,
+            "productId": "0011",
+            "shopId": "0001"
+        },
+        {
+            "description": "lCYrTJavQE",
+            "name": "Dbrmk",
+            "price": 120,
+            "productId": "0012",
+            "shopId": "0001"
+        }
+    ],
+    "shopId": "0001"
+}
+
+```
+Example invokation of orders API is forbidden for the customer(registeredcustomer1@axians.com). See the IAM role mapping [ Registered User Access](#registered-user-access)
+```
+https://gt4n9vo5yk.execute-api.eu-central-1.amazonaws.com/prod/shop/0001/orders
+
+{
+    "Message": "User: arn:aws:sts::645143808269:assumed-role/api-security-demo-IdentityPool-AuthenticatedDefaultRole/CognitoIdentityCredentials is not authorized to perform: execute-api:Invoke on resource: arn:aws:execute-api:eu-central-1:********8269:gt4n9vo5yk/prod/GET/shop/0001/orders"
+
+}
+
+```
 Remember to update the credentials in Postman whenever they expire, as temporary credentials have a limited lifetime.
 
 ## License
