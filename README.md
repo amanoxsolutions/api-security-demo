@@ -39,7 +39,7 @@ The demo:
 
 The API is defined using the OpenAPI specification. The definition can be found in the YAML file located at `resources/openapi/api-definition.yaml`. Each API endpoint has a corresponding Lambda function that performs the endpoint action and interacts with the DynamoDB table.
 
-See the OpenAPI definition [here](https://petstore.swagger.io/https://github.com/amanoxsolutions/api-security-demo/resources/openapi/api-definition.yaml)
+See the OpenAPI definition [here](./resources/openapi/api-definition.yaml)
 
 ### Authentication & Authorization
 
