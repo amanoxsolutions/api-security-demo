@@ -1,0 +1,317 @@
+openapi: "3.0.1"
+info:
+  title: "A very simple demo API for a shopping SaaS platform"
+  version: "1.0.0"
+paths:
+  /products:
+    get:
+      summary: "list the products a shop is selling"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "list-products"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+      parameters:
+        - name: "shopId"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+          description: "Unique identifier for the shop"
+        - name: "shopToken"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+          description: "Token for the shop"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    shopId:
+                      type: "string"
+                    productId:
+                      type: "string"
+                    name:
+                      type: "string"
+                    description:
+                      type: "string"
+                    price:
+                      type: "number"
+        "400":
+          description: "Bad request"
+        "401":
+          description: "Unauthorized"
+  /order:
+    post:
+      summary: "create an order"
+      security:
+      - sigv4: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                shopId:
+                  type: "string"
+                phoneNumber:
+                  type: "string"
+                name:
+                  type: "string"
+                items:
+                  type: "array"
+                  items:
+                    type: "object"
+                    properties:
+                      productId:
+                        type: "string"
+                      quantity:
+                        type: "integer"
+              required:
+                - "shopId"
+                - "phoneNumber"
+                - "name"
+                - "items"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  orderId:
+                    type: "string"
+        "400":
+          description: "Bad request"
+        "401":
+          description: "Unauthorized"
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "place-order"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+  /order/{id}:
+    get:
+      summary: "get an order by id"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  customerId:
+                    type: "string"
+                  orderId:
+                    type: "string"
+                  date:
+                    type: "string"
+                  shopId:
+                    type: "string"
+                  name:
+                    type: "string"
+                  phoneNumber:
+                    type: "string"
+                  amount:
+                    type: "number"
+                  status:
+                    type: "string"
+        "401":
+          description: "Unauthorized"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "get-order"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+  /shop/{id}:
+    get:
+      summary: "get a shop information by id"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  shopId:
+                    type: "string"
+                  name:
+                    type: "string"
+                  phoneNumber:
+                    type: "string"
+                  address:
+                    type: "number"
+                  shopToken:
+                    type: "string"
+        "404":
+          description: "Not found"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "get-shop"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+  /shop/{id}/token:
+    post:
+      summary: "regenerate a token for a shop by id"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  shopToken:
+                    type: "string"
+        "404":
+          description: "Not found"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "regenerate-token"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+  /shop/{id}/orders:
+    get:
+      summary: "list the orders for a shop by id"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    customerId:
+                      type: "string"
+                    orderId:
+                      type: "string"
+                    date:
+                      type: "string"
+                    shopId:
+                      type: "string"
+                    name:
+                      type: "string"
+                    phoneNumber:
+                      type: "string"
+                    amount:
+                      type: "number"
+                    status:
+                      type: "string"
+        "401":
+          description: "Unauthorized"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "list-orders"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+  /shop/{id}/sales:
+    get:
+      summary: "get the sales for a shop by id"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  shopId:
+                    type: "string"
+                  totalAmount:
+                    type: "number"
+        "404":
+          description: "Not found"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "get-sales"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+  /service-stats:
+    get:
+      summary: "get the statistics of the service"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  totalNumberOfShops:
+                    type: "number"
+                  averageNumberOfOrdersPerShop:
+                    type: "number"
+                  totalNumberOfCustomers:
+                    type: "number"
+                  averageNumberOfOrdersPerCustomer:
+                    type: "number"
+        "404":
+          description: "Not found"
+      security:
+      - sigv4: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "get-service-stats"
+        passthroughBehavior: "when_no_match"
+        type: "aws_proxy"
+components:
+  securitySchemes:
+    sigv4:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "awsSigv4"

@@ -1,0 +1,27 @@
+# IDEs
+.vscode
+.idea
+
+# CDK
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+!.eslintrc.js
+!.prettierrc.js
+venv/
+
+# Pytest
+resources/tests/__pycache__/*
+resources/tests/.pytest_cache/*
+resources/tests/__pycache__
+resources/tests/.pytest_cache
+**/__pycache__/*
+**/.pytest_cache/*
+**/__pycache__
+**/.pytest_cache
+/output/
