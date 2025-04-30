@@ -22,7 +22,7 @@
   "dependencies": {
     "@aws-cdk/aws-lambda-python-alpha": "^2.185.0-alpha.0",
     "@aws-solutions-constructs/aws-openapigateway-lambda": "^2.79.1",
-    "aws-cdk-lib": "2.185.0",
+    "aws-cdk-lib": "2.192.0",
     "constructs": "^10.4.2",
     "murmurhash": "^2.0.1"
   }
